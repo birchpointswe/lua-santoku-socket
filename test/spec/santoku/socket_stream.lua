@@ -100,8 +100,8 @@ local GMAIL_CERT = fake_cert({
 test("plain tcp roundtrip", function ()
   local chunks, closes = {}, {}
   state.sock = fake_sock({ recvs = {
-    { d = "hel" },
-    { e = "timeout", p = "lo" },
+    { d = "h" },
+    { e = "timeout", p = "ello" },
     { e = "timeout", p = "" },
     { e = "closed", p = "" },
   } })
@@ -118,9 +118,8 @@ test("plain tcp roundtrip", function ()
   assert(got.write("abc"))
   assert(state.sock.sent[1] == "abc")
   assert(got.step(10))
-  assert(chunks[1] == "hel")
-  assert(got.step(10))
-  assert(chunks[2] == "lo")
+  assert(chunks[1] == "hello")
+  assert(state.sock.recvi == 2)
   local ok2, e2 = got.step(10)
   assert(ok2 and e2 == "timeout")
   local ok3, e3 = got.step(10)
@@ -129,6 +128,46 @@ test("plain tcp roundtrip", function ()
   local ok4 = got.step(10)
   assert(ok4 == false)
   assert(#closes == 1)
+end)
+
+test("a blocked read yields to the drain timeout, not the step timeout", function ()
+  local chunks = {}
+  state.sock = fake_sock({ recvs = {
+    { d = "x" },
+    { e = "timeout", p = "" },
+  } })
+  local got
+  stream.connect({
+    host = "h", port = 1, tls = false,
+    data = function (c) chunks[#chunks + 1] = c end,
+  }, function (ok, c)
+    assert(ok, "connect failed")
+    got = c
+  end)
+  assert(got.step(10))
+  assert(chunks[1] == "x")
+  assert(state.sock.timeout == 0)
+end)
+
+test("a partial read carrying an error delivers before closing", function ()
+  local chunks, closes = {}, {}
+  state.sock = fake_sock({ recvs = {
+    { e = "closed", p = "tail" },
+  } })
+  local got
+  stream.connect({
+    host = "h", port = 1, tls = false,
+    data = function (c) chunks[#chunks + 1] = c end,
+    closed = function (e) closes[#closes + 1] = e or "eof" end,
+  }, function (ok, c)
+    assert(ok, "connect failed")
+    got = c
+  end)
+  local ok1, e1 = got.step(10)
+  assert(chunks[1] == "tail")
+  assert(state.sock.recvi == 1)
+  assert(ok1 == false and e1 == "closed")
+  assert(#closes == 1 and closes[1] == "closed")
 end)
 
 test("write resumes after timeout", function ()

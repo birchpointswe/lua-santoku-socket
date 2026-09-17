@@ -6,6 +6,8 @@ local fs = require("santoku.fs")
 
 local M = {}
 
+local DRAIN = 8191
+
 M.ca_paths = {
   "/data/data/com.termux/files/usr/etc/tls/cert.pem",
   "/etc/ssl/certs/ca-certificates.crt",
@@ -84,7 +86,6 @@ M.connect = function (opts, done)
     return done(false, cerr)
   end
   local tls = { verified = false }
-  local secure = false
   if opts.tls ~= false then
     local cafile = opts.cafile
     local capath = opts.capath
@@ -139,7 +140,6 @@ M.connect = function (opts, done)
       tls.names = names
     end
     sock = wrapped
-    secure = true
   end
   local closed = false
   local function shut (e)
@@ -173,25 +173,25 @@ M.connect = function (opts, done)
       if closed then
         return false, "closed"
       end
-      if not (secure and sock:dirty()) then
-        local ready = socket.select({ sock }, nil, (ms or 1000) / 1000)
-        if #ready == 0 then
-          return true, "timeout"
-        end
+      sock:settimeout((ms or 1000) / 1000)
+      local d, rerr, partial = sock:receive(1)
+      local chunk = d or partial or ""
+      if #chunk > 0 and not rerr then
+        sock:settimeout(0)
+        local d2, rerr2, partial2 = sock:receive(DRAIN)
+        chunk = chunk .. (d2 or partial2 or "")
+        rerr = rerr2
       end
-      sock:settimeout(0)
-      local d, rerr, partial = sock:receive(8192)
-      local chunk = d or partial
-      if chunk and #chunk > 0 then
+      if #chunk > 0 then
         opts.data(chunk)
-        if not d and rerr ~= "timeout" and rerr ~= "wantread" then
+        if rerr and rerr ~= "timeout" and rerr ~= "wantread" then
           shut(rerr)
           return false, rerr
         end
         return true
       end
       if rerr == "timeout" or rerr == "wantread" then
-        return true
+        return true, "timeout"
       end
       shut(rerr)
       return false, rerr
