@@ -1,6 +1,6 @@
 local env = {
   name = "santoku-socket",
-  version = "2.2.1-1",
+  version = "2.3.0-1",
   license = "MIT",
   public = true,
   dependencies = {

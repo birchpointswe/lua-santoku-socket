@@ -84,6 +84,7 @@ M.connect = function (opts, done)
     return done(false, cerr)
   end
   local tls = { verified = false }
+  local secure = false
   if opts.tls ~= false then
     local cafile = opts.cafile
     local capath = opts.capath
@@ -138,6 +139,7 @@ M.connect = function (opts, done)
       tls.names = names
     end
     sock = wrapped
+    secure = true
   end
   local closed = false
   local function shut (e)
@@ -171,7 +173,13 @@ M.connect = function (opts, done)
       if closed then
         return false, "closed"
       end
-      sock:settimeout((ms or 1000) / 1000)
+      if not (secure and sock:dirty()) then
+        local ready = socket.select({ sock }, nil, (ms or 1000) / 1000)
+        if #ready == 0 then
+          return true, "timeout"
+        end
+      end
+      sock:settimeout(0)
       local d, rerr, partial = sock:receive(8192)
       local chunk = d or partial
       if chunk and #chunk > 0 then
@@ -183,7 +191,7 @@ M.connect = function (opts, done)
         return true
       end
       if rerr == "timeout" or rerr == "wantread" then
-        return true, "timeout"
+        return true
       end
       shut(rerr)
       return false, rerr
