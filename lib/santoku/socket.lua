@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local sys = require("santoku.system")

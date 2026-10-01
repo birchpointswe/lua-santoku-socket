@@ -1,7 +1,10 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local env = {
   name = "santoku-socket",
-  version = "2.3.0-1",
+  version = "2.3.1-1",
   license = "MIT",
+  copyright = "Birch Point SWE",
   public = true,
   dependencies = {
     "lua == 5.1",

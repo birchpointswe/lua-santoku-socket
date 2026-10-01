@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local test = require("santoku.test")
 
 local err = require("santoku.error")
@@ -5,10 +7,6 @@ local assert = err.assert
 
 local validate = require("santoku.validate")
 local eq = validate.isequal
-
-
-
-
 
 local stub = {}
 

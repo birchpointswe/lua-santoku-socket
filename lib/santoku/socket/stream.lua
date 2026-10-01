@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local socket = require("socket")
 local ssl = require("ssl")
 local str = require("santoku.string")
